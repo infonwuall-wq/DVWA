@@ -102,14 +102,70 @@ sudo bash -c "$(curl --fail --show-error --silent --location https://raw.githubu
    ```sh
    wget https://raw.githubusercontent.com/IamCarron/DVWA-Script/main/Install-DVWA.sh
    ```
+2. **Install Missing Script**
+   ```sh
+   nano Install-DVWA.sh
+   ```
+3. **COPY & PASTE THIS SCRIPT INTO NANO**
+   ```sh
+    #!/bin/bash
 
-2. **Make the script executable:**
+   echo "[+] Updating system…"
+   sudo apt update -y
+
+   echo "[+] Installing Apache, PHP, and MariaDB…"
+   sudo apt install apache2 mariadb-server php php-mysqli php-gd php-zip php-mbstring git -y
+
+   echo "[+] Starting services…"
+   sudo systemctl start apache2
+   sudo systemctl start mariadb
+   sudo systemctl enable apache2
+   sudo systemctl enable mariadb
+
+   echo "[+] Creating DVWA directory..."
+   sudo rm -rf /var/www/html/dvwa
+   cd /var/www/html
+   sudo git clone https://github.com/digininja/DVWA.git dvwa
+
+   echo "[+] Setting permissions..."
+   sudo chown -R www-data:www-data /var/www/html/dvwa/
+   sudo chmod -R 755 /var/www/html/dvwa/
+
+   echo "[+] Creating MySQL database and user..."
+   sudo mysql -u root <<EOF
+   DROP DATABASE IF EXISTS dvwa;
+   CREATE DATABASE dvwa;
+   DROP USER IF EXISTS 'dvwa'@'localhost';
+   CREATE USER 'dvwa'@'localhost' IDENTIFIED BY 'password';
+   GRANT ALL PRIVILEGES ON dvwa.* TO 'dvwa'@'localhost';
+   FLUSH PRIVILEGES;
+   EOF
+
+   echo "[+] Configuring DVWA..."
+   sudo cp /var/www/html/dvwa/config/config.inc.php.dist /var/www/html/dvwa/config/config.inc.php
+
+   sudo sed -i "s/'db_user'.*/'db_user'] = 'dvwa';/" /var/www/html/dvwa/config/config.inc.php
+   sudo sed -i "s/'db_password'.*/'db_password'] = 'password';/" /var/www/html/dvwa/config/config.inc.php
+   sudo sed -i "s/'db_server'.*/'db_server'] = 'localhost';/" /var/www/html/dvwa/config/config.inc.php
+
+   echo "[+] Enabling Apache mod_rewrite..."
+   sudo a2enmod rewrite
+   sudo sed -i "s/AllowOverride None/AllowOverride All/g" /etc/apache2/apache2.conf
+
+   echo "[+] Restarting Apache..."
+   sudo systemctl restart apache2
+
+   echo "[+] DVWA installation complete!"
+   echo "Open: http://localhost/dvwa/setup.php"
+   ```
+
+4. **Make the script executable:**
 
    ```sh
    chmod +x Install-DVWA.sh
    ```
 
-3. **Run the script as root:**
+5. **Run the script as root:**
 
    ```sh
    sudo ./Install-DVWA.sh
